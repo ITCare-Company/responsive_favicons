@@ -19,7 +19,7 @@ use Symfony\Component\Routing\Route;
  */
 class DefaultFavicons {
 
-    /**
+  /**
    * {@inheritdoc}
    */
   public function routes() {
@@ -52,12 +52,11 @@ class DefaultFavicons {
           '_access' => 'TRUE',
         )
       );
-      // Add the route under the name 'example.content'.
+      // Add the route under a unique key.
       $key = preg_replace("/[^A-Za-z]/", '', $icon);
       $route_collection->add('responsive_favicons.' . $key, $route);
     }
 
     return $route_collection;
   }
-
 }
