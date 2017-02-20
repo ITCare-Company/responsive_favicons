@@ -52,9 +52,9 @@ Installation and configuration
 
    in the Drupal root .htaccess file.
 
-   2) Alter the variable 404_fast_paths_exclude in your settings.php file:
+   2) Alter the config setting system.performance.fast_404.exclude_paths in your settings.php file:
 
-   $conf['404_fast_paths_exclude'] = '/\/(?:styles)\/|favicon\.ico|apple-touch-icon(?:-precomposed)?\.png|browserconfig\.xml/';
+   $config['system.performance']['fast_404']['exclude_paths'] = '/\/(?:styles)\/|(?:system\/files)\/|favicon\.ico|apple-touch-icon(?:-precomposed)?\.png|browserconfig\.xml/';
 
 You site will now output the required metadata for the favicons to work. You can
 always check the status report page to find out if your site has been correctly
