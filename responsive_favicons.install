@@ -5,40 +5,42 @@
  * Responsive favicons install file.
  */
 
+use Drupal\Core\Url;
+
 /**
  * Implements hook_requirements().
  */
 function responsive_favicons_requirements($phase) {
-  $requirements = array();
+  $requirements = [];
   if ($phase === 'runtime') {
     // Make sure that the favicons exist.
     $tags = responsive_favicons_load_all_icons();
     if (!empty($tags['missing'])) {
-      $requirements['responsive_favicons_missing'] = array(
+      $requirements['responsive_favicons_missing'] = [
         'title' => t('Responsive favicons'),
-        'value' => implode('<br/>', array_map('check_plain', $tags['missing'])),
-        'description' => t('The favicon files are missing for the tags above. Go to <a href="@config-url">configuration page</a> to add missing files.', array(
-          '@config-url' => url('admin/config/user-interface/responsive_favicons'),
-        )),
+        'description' => t('The favicon files are missing for the following tags. Go to <a href=":url">configuration page</a> to add missing files.<br/><code>@tags</code>', [
+          ':url' => Url::fromRoute('responsive_favicons.admin')->toString(),
+          '@tags' => implode(', ', $tags['missing']),
+        ]),
         'severity' => REQUIREMENT_ERROR,
-      );
+      ];
     }
     if (!empty($tags['found'])) {
-      $requirements['responsive_favicons_found'] = array(
+      $requirements['responsive_favicons_found'] = [
         'title' => t('Responsive favicons'),
         'value' => \Drupal::translation()->formatPlural(count($tags['found']), 'Found 1 favicon', 'Found @count favicons'),
         'severity' => REQUIREMENT_OK,
-      );
+      ];
     }
 
     // Point out the potential conflict with the favicon module.
     $moduleHandler = \Drupal::service('module_handler');
     if ($moduleHandler->moduleExists('favicon')) {
-      $requirements['responsive_favicons_favicon_module'] = array(
+      $requirements['responsive_favicons_favicon_module'] = [
         'title' => t('Responsive favicons'),
         'value' => t('You do not need to have the favicon module enabled when you have the responsive favicons module enabled. Please see the README for more information.'),
         'severity' => REQUIREMENT_WARNING,
-      );
+      ];
     }
   }
 
