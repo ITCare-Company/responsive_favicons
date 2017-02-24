@@ -158,10 +158,10 @@ function _responsive_favicons_validate_tags($html) {
     }
   }
 
-  return array(
+  return [
     'found' => $found,
     'missing' => $missing,
-  );
+  ];
 }
 
 /**

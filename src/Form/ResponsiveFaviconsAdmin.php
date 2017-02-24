@@ -214,7 +214,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
   private function archiveExtract($file, $directory) {
     $archiver = archiver_get_archiver($file);
     if (!$archiver) {
-      throw new Exception(t('Cannot extract %file, not a valid archive.', array ('%file' => $file)));
+      throw new Exception(t('Cannot extract %file, not a valid archive.', array('%file' => $file)));
     }
 
     if (file_exists($directory)) {
