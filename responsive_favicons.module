@@ -184,9 +184,23 @@ function _responsive_favicons_normalise_path($file_path) {
   // this is the best for now.
   // @see https://www.drupal.org/node/837794#comment-9124435
   // @see http://drupal.stackexchange.com/a/185573/166
-  $path = \Drupal::service('file_system')->realpath('public://');
-  $path = str_replace(DRUPAL_ROOT, '', $path);
-  $path .= '/' . $config->get('path') . $file_path;
+  $path = \Drupal::service('file_system')->realpath('public://') . '/' . $config->get('path') . $file_path;
 
-  return $path;
+  // No symlinks for the files directory, this is the simpliest use case.
+  if (strpos($path, DRUPAL_ROOT) === 0) {
+    return str_replace(DRUPAL_ROOT, '', $path);
+  }
+
+  // Take into account hosting environments that have the public files
+  // directory symlinked, and thus the DRUPAL_ROOT is not actaully at the start
+  // of the above.
+  $sites_position = strpos($path, '/sites/');
+
+  // Not finding the "/sites/" folder is problematic, so just return the full
+  // path.
+  if ($sites_position === FALSE) {
+    return $path;
+  }
+
+  return substr($path, $sites_position);
 }
