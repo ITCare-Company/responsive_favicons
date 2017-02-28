@@ -92,6 +92,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
     // based on the code in Drupal core.
     //
     // @see UpdateManagerInstall->submitForm().
+    $local_cache = NULL;
     if (!empty($_FILES['files']['name']['upload'])) {
       $validators = array('file_validate_extensions' => array(archiver_get_extensions()));
       $field = 'upload';
@@ -103,57 +104,57 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
       $local_cache = $finfo->getFileUri();
     }
 
-    $directory = $this->extractDirectory();
-    try {
-      $archive = $this->archiveExtract($local_cache, $directory);
-    }
-    catch (\Exception $e) {
-      kint($e->getMessage());
-      //$form_state->setError($field, $e->getMessage());
-      //parent::submitForm($form, $form_state);
-      return;
-    }
+    // Only execute the below if a file was uploaded.
+    if (isset($local_cache)) {
+      $directory = $this->extractDirectory();
+      try {
+        $archive = $this->archiveExtract($local_cache, $directory);
+      }
+      catch (\Exception $e) {
+        drupal_set_message($e->getMessage(), 'error');
+        return;
+      }
 
-    $files = $archive->listContents();
-    if (!$files) {
-      $form_state->setError($field, t('Provided archive contains no files.'));
-      return;
-    }
+      $files = $archive->listContents();
+      if (!$files) {
+        $form_state->setError($field, t('Provided archive contains no files.'));
+        return;
+      }
 
-    $destination = 'public://' . $config->get('path');
-    file_prepare_directory($destination, FILE_CREATE_DIRECTORY);
+      $destination = 'public://' . $config->get('path');
+      file_prepare_directory($destination, FILE_CREATE_DIRECTORY);
 
-    // Copy the files to the correct location.
-    $success_count = 0;
-    foreach ($files as $file) {
-      $success = file_unmanaged_copy($directory . '/' . $file, $destination, FILE_EXISTS_REPLACE);
-      $uri = $destination . '/' . $file;
-      if ($success) {
-        $success_count++;
+      // Copy the files to the correct location.
+      $success_count = 0;
+      foreach ($files as $file) {
+        $success = file_unmanaged_copy($directory . '/' . $file, $destination, FILE_EXISTS_REPLACE);
+        $uri = $destination . '/' . $file;
+        if ($success) {
+          $success_count++;
 
-        // Rewrite the paths of the JSON files.
-        if (preg_match('/\.json$/', $file)) {
-          $file_contents = file_get_contents(drupal_realpath($uri));
-          $find = preg_quote('"\/android-chrome', '/');
-          $replace = '"' . str_replace('/', '\/', _responsive_favicons_normalise_path('/android-chrome'));
-          $file_contents = preg_replace('/' . $find . '/', $replace, $file_contents);
-          file_unmanaged_save_data($file_contents, $uri, FILE_EXISTS_REPLACE);
-        }
-        // Rewrite the paths of the XML files.
-        else if (preg_match('/\.xml$/', $file)) {
-          $file_contents = file_get_contents(drupal_realpath($uri));
-          $find = preg_quote('"/mstile', '/');
-          $replace = '"' . _responsive_favicons_normalise_path('/mstile');
-          $file_contents = preg_replace('/' . $find . '/', $replace, $file_contents);
-          file_unmanaged_save_data($file_contents, $uri, FILE_EXISTS_REPLACE);
+          // Rewrite the paths of the JSON files.
+          if (preg_match('/\.json$/', $file)) {
+            $file_contents = file_get_contents(drupal_realpath($uri));
+            $find = preg_quote('"\/android-chrome', '/');
+            $replace = '"' . str_replace('/', '\/', _responsive_favicons_normalise_path('/android-chrome'));
+            $file_contents = preg_replace('/' . $find . '/', $replace, $file_contents);
+            file_unmanaged_save_data($file_contents, $uri, FILE_EXISTS_REPLACE);
+          }
+          // Rewrite the paths of the XML files.
+          else if (preg_match('/\.xml$/', $file)) {
+            $file_contents = file_get_contents(drupal_realpath($uri));
+            $find = preg_quote('"/mstile', '/');
+            $replace = '"' . _responsive_favicons_normalise_path('/mstile');
+            $file_contents = preg_replace('/' . $find . '/', $replace, $file_contents);
+            file_unmanaged_save_data($file_contents, $uri, FILE_EXISTS_REPLACE);
+          }
         }
       }
-    }
 
-    if ($success_count > 0) {
-      drupal_set_message(\Drupal::translation()->formatPlural($success_count, 'Uploaded 1 favicon file successfully.', 'Uploaded @count favicon files successfully.'));
+      if ($success_count > 0) {
+        drupal_set_message(\Drupal::translation()->formatPlural($success_count, 'Uploaded 1 favicon file successfully.', 'Uploaded @count favicon files successfully.'));
+      }
     }
-
 
     // Save the settings.
     $config->save();
@@ -209,12 +210,12 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
    * @return Archiver
    *   The Archiver object used to extract the archive.
    *
-   * @throws Exception
+   * @throws \Exception
    */
   private function archiveExtract($file, $directory) {
     $archiver = archiver_get_archiver($file);
     if (!$archiver) {
-      throw new Exception(t('Cannot extract %file, not a valid archive.', array('%file' => $file)));
+      throw new \Exception(t('Cannot extract %file, not a valid archive.', array('%file' => $file)));
     }
 
     if (file_exists($directory)) {
