@@ -148,6 +148,14 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
             $file_contents = preg_replace('/' . $find . '/', $replace, $file_contents);
             file_unmanaged_save_data($file_contents, $uri, FILE_EXISTS_REPLACE);
           }
+          // Rewrite the paths of the WEBMANIFEST files.
+          else if (preg_match('/\.webmanifest$/', $file)) {
+            $file_contents = file_get_contents(\Drupal::service('file_system')->realpath($uri));
+            $find = preg_quote('"/android-chrome', '/');
+            $replace = '"' . _responsive_favicons_normalise_path('/android-chrome');
+            $file_contents = preg_replace('/' . $find . '/', $replace, $file_contents);
+            file_unmanaged_save_data($file_contents, $uri, FILE_EXISTS_REPLACE);
+          }
         }
       }
 
