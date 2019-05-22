@@ -94,7 +94,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
     // @see UpdateManagerInstall->submitForm().
     $local_cache = NULL;
     if (!empty($_FILES['files']['name']['upload'])) {
-      $validators = array('file_validate_extensions' => array(archiver_get_extensions()));
+      $validators = ['file_validate_extensions' => [archiver_get_extensions()]];
       $field = 'upload';
       if (!($finfo = file_save_upload('upload', $validators, NULL, 0, FILE_EXISTS_REPLACE))) {
         // Failed to upload the file. file_save_upload() calls
@@ -223,7 +223,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
   private function archiveExtract($file, $directory) {
     $archiver = archiver_get_archiver($file);
     if (!$archiver) {
-      throw new \Exception(t('Cannot extract %file, not a valid archive.', array('%file' => $file)));
+      throw new \Exception(t('Cannot extract %file, not a valid archive.', ['%file' => $file]));
     }
 
     if (file_exists($directory)) {
