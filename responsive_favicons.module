@@ -61,7 +61,7 @@ function responsive_favicons_page_attachments_alter(array &$attachments) {
   $config = \Drupal::config('responsive_favicons.settings');
   if ($config->get('remove_default') && isset($attachments['#attached']['html_head_link'])) {
     foreach ($attachments['#attached']['html_head_link'] as $key => $config) {
-      if (isset($config[0]['rel']) && $config[0]['rel'] === 'shortcut icon') {
+      if (isset($config[0]['href']) && $config[0]['href'] === '/core/misc/favicon.ico') {
         unset($attachments['#attached']['html_head_link'][$key]);
       }
     }
