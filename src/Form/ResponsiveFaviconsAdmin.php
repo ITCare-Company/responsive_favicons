@@ -73,7 +73,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
       '#type' => 'textfield',
       '#title' => $this->t('Path to responsive favicon files'),
       '#description' => $this->t('A local file system path where favicon files will be stored. This directory must exist and be writable by Drupal. An attempt will be made to create this directory if it does not already exist.'),
-      '#field_prefix' => file_create_url('public://'),
+      '#field_prefix' => \Drupal::service('file_url_generator')->generateAbsoluteString('public://'),
       '#default_value' => $config->get('path'),
       '#states' => [
         'visible' => [
