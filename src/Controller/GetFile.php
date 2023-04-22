@@ -33,7 +33,7 @@ class GetFile extends ControllerBase {
 
     $file = new \stdClass();
     $file->uri = $uri;
-    $file->filemime = \Drupal::service('file.mime_type.guesser')->guess($uri);
+    $file->filemime = \Drupal::service('file.mime_type.guesser')->guessMimeType($uri);
     $file->filesize = @filesize($uri);
 
     return $file;
