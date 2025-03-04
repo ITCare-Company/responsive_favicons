@@ -2,13 +2,15 @@
 
 namespace Drupal\responsive_favicons\Form;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\File\Exception\FileException;
 use Drupal\Core\File\Exception\FileWriteException;
+use Drupal\Core\File\FileExists;
+use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Messenger\MessengerTrait;
 use Drupal\Core\Site\Settings;
-use Drupal\Core\File\FileSystemInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -27,15 +29,32 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
    *
    * @var \Drupal\Core\File\FileSystemInterface
    */
-  protected $fileSystem;
+  protected FileSystemInterface $fileSystem;
+
+  /**
+   * Constructs a ResponsiveFaviconsAdmin object.
+   *
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   *   The factory for configuration objects.
+   * @param \Drupal\Core\File\FileSystemInterface $fileSystem
+   *   The file system service.
+   * @param \Drupal\Core\Config\TypedConfigManagerInterface|null $typedConfigManager
+   *   The typed config manager.
+   */
+  public function __construct(ConfigFactoryInterface $config_factory, FileSystemInterface $fileSystem, $typedConfigManager = NULL) {
+    parent::__construct($config_factory, $typedConfigManager);
+    $this->fileSystem = $fileSystem;
+  }
 
   /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
-    $instance = parent::create($container);
-    $instance->fileSystem = $container->get('file_system');
-    return $instance;
+    return new static(
+      $container->get('config.factory'),
+      $container->get('file_system'),
+      $container->get('config.typed') ?? NULL,
+    );
   }
 
   /**
@@ -169,8 +188,8 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
       // @see UpdateManagerInstall->submitForm().
       $local_cache = NULL;
       if (!empty($_FILES['files']['name']['upload'])) {
-        $validators = ['file_validate_extensions' => ['zip']];
-        if (!($finfo = file_save_upload('upload', $validators, NULL, 0, FileSystemInterface::EXISTS_REPLACE))) {
+        $validators = ['FileExtension' => ['extensions' => 'zip']];
+        if (!($finfo = file_save_upload('upload', $validators, NULL, 0, FileExists::Replace))) {
           // Failed to upload the file. file_save_upload() calls
           // \Drupal\Core\Messenger\MessengerInterface::addError() on failure.
           return;
@@ -190,8 +209,9 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
         }
 
         $files = $archive->listContents();
+
+        // You cannot validate the form in the submit handler.
         if (!$files) {
-          $form_state->setError($field, $this->t('Provided archive contains no files.'));
           return;
         }
 
@@ -203,7 +223,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
         foreach ($files as $file) {
           // Handle exceptions when copy does not happen correctly.
           try {
-            $success = $this->fileSystem->copy($directory . '/' . $file, $destination, FileSystemInterface::EXISTS_REPLACE);
+            $success = $this->fileSystem->copy($directory . '/' . $file, $destination, FileExists::Replace);
           }
           catch (FileException $e) {
             $success = FALSE;
@@ -220,7 +240,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
                 $find = preg_quote('"\/android-chrome', '/');
                 $replace = '"' . str_replace('/', '\/', _responsive_favicons_normalise_path('/android-chrome'));
                 $file_contents = preg_replace('/' . $find . '/', $replace, $file_contents);
-                $this->fileSystem->saveData($file_contents, $uri, FileSystemInterface::EXISTS_REPLACE);
+                $this->fileSystem->saveData($file_contents, $uri, FileExists::Replace);
               }
               // Rewrite the paths of the XML files.
               elseif (preg_match('/\.xml$/', $file)) {
@@ -228,7 +248,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
                 $find = preg_quote('"/mstile', '/');
                 $replace = '"' . _responsive_favicons_normalise_path('/mstile');
                 $file_contents = preg_replace('/' . $find . '/', $replace, $file_contents);
-                $this->fileSystem->saveData($file_contents, $uri, FileSystemInterface::EXISTS_REPLACE);
+                $this->fileSystem->saveData($file_contents, $uri, FileExists::Replace);
               }
               // Rewrite the paths of the WEBMANIFEST files.
               elseif (preg_match('/\.webmanifest$/', $file)) {
@@ -236,7 +256,10 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
                 $find = preg_quote('"/android-chrome', '/');
                 $replace = '"' . _responsive_favicons_normalise_path('/android-chrome');
                 $file_contents = preg_replace('/' . $find . '/', $replace, $file_contents);
-                $this->fileSystem->saveData($file_contents, $uri, FileSystemInterface::EXISTS_REPLACE);
+                $find = preg_quote('"/web-app-manifest', '/');
+                $replace = '"' . _responsive_favicons_normalise_path('/web-app-manifest');
+                $file_contents = preg_replace('/' . $find . '/', $replace, $file_contents);
+                $this->fileSystem->saveData($file_contents, $uri, FileExists::Replace);
               }
             }
             catch (FileWriteException $e) {
