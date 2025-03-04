@@ -75,7 +75,7 @@ function responsive_favicons_load_all_icons() {
   $icons = &drupal_static(__FUNCTION__);
   if (!isset($icons)) {
     $config = \Drupal::config('responsive_favicons.settings');
-    $cid = 'responsive_favicons:icons';
+    $cid = _responsive_favicons_get_cache_id();
     if ($cached = \Drupal::cache()->get($cid)) {
       $icons = $cached->data;
     }
@@ -102,6 +102,16 @@ function responsive_favicons_load_all_icons() {
   }
 
   return $icons;
+}
+
+/**
+ * Gets the icons' cache identifier.
+ *
+ * @return string
+ *   The icons' cache identifier.
+ */
+function _responsive_favicons_get_cache_id() {
+  return 'responsive_favicons:icons';
 }
 
 /**
@@ -215,6 +225,14 @@ function _responsive_favicons_normalise_path($file_path) {
 
   // Convert backslashes when running on Windows.
   $file_path = str_replace('\\', '/', $file_path);
+
+  // Append browser cache refresh suffix.
+  if ($config->get('cache_refresh_suffix') === TRUE) {
+    $query_string = \Drupal::service('asset.query_string')->get();
+    if (!empty($query_string)) {
+      $file_path .= '?' . $query_string;
+    }
+  }
 
   if ($config->get('path_type') === 'upload') {
     return '/' . PublicStream::basePath() . '/' . $config->get('path') . $file_path;

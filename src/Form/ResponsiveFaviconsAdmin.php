@@ -142,6 +142,12 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
         ],
       ],
     ];
+    $form['cache_refresh_suffix'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Add a cache refresh suffix to icons URLs'),
+      '#description' => $this->t("Allow updating icons without requiring a manual browser cache reset."),
+      '#default_value' => $config->get('cache_refresh_suffix') ?? FALSE,
+    ];
     $form['remove_default'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Remove default favicon from Drupal'),
@@ -177,7 +183,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
     $tags = array_filter($tags);
     $config->set('tags', $tags);
 
-    // Get the favicons location type.
+    // Get the favicon location type.
     $path_type = $form_state->getValue('path_type');
     $config->set('path_type', $path_type);
 
@@ -187,7 +193,8 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
       $config->set('path', $path);
     }
 
-    // Checkbox.
+    // Checkboxes.
+    $config->set('cache_refresh_suffix', $form_state->getValue('cache_refresh_suffix'));
     $config->set('remove_default', $form_state->getValue('remove_default'));
 
     // If the path type is upload, handle the uploaded zip file.
@@ -241,8 +248,8 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
           catch (FileException $e) {
             $success = FALSE;
           }
-          $uri = $destination . '/' . $file;
           if ($success) {
+            $uri = $destination . '/' . $file;
             $success_count++;
             // Handle exceptions when file contents are not saved correctly into
             // destination.
@@ -251,27 +258,27 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
               if (preg_match('/\.json$/', $file)) {
                 $file_contents = file_get_contents($this->fileSystem->realpath($uri));
                 $find = preg_quote('"\/android-chrome', '/');
-                $replace = '"' . str_replace('/', '\/', _responsive_favicons_normalise_path('/android-chrome'));
-                $file_contents = preg_replace('/' . $find . '/', $replace, $file_contents);
+                $replace = '"' . str_replace('/', '\/', _responsive_favicons_normalise_path('/android-chrome${1}'));
+                $file_contents = preg_replace('/' . $find . '([^"]*)/', $replace, $file_contents);
                 $this->fileSystem->saveData($file_contents, $uri, FileExists::Replace);
               }
               // Rewrite the paths of the XML files.
               elseif (preg_match('/\.xml$/', $file)) {
                 $file_contents = file_get_contents($this->fileSystem->realpath($uri));
                 $find = preg_quote('"/mstile', '/');
-                $replace = '"' . _responsive_favicons_normalise_path('/mstile');
-                $file_contents = preg_replace('/' . $find . '/', $replace, $file_contents);
+                $replace = '"' . _responsive_favicons_normalise_path('/mstile${1}');
+                $file_contents = preg_replace('/' . $find . '([^"]*)/', $replace, $file_contents);
                 $this->fileSystem->saveData($file_contents, $uri, FileExists::Replace);
               }
               // Rewrite the paths of the WEBMANIFEST files.
               elseif (preg_match('/\.webmanifest$/', $file)) {
                 $file_contents = file_get_contents($this->fileSystem->realpath($uri));
                 $find = preg_quote('"/android-chrome', '/');
-                $replace = '"' . _responsive_favicons_normalise_path('/android-chrome');
-                $file_contents = preg_replace('/' . $find . '/', $replace, $file_contents);
+                $replace = '"' . _responsive_favicons_normalise_path('/android-chrome${1}');
+                $file_contents = preg_replace('/' . $find . '([^"]*)/', $replace, $file_contents);
                 $find = preg_quote('"/web-app-manifest', '/');
-                $replace = '"' . _responsive_favicons_normalise_path('/web-app-manifest');
-                $file_contents = preg_replace('/' . $find . '/', $replace, $file_contents);
+                $replace = '"' . _responsive_favicons_normalise_path('/web-app-manifest${1}');
+                $file_contents = preg_replace('/' . $find . '([^"]*)/', $replace, $file_contents);
                 $this->fileSystem->saveData($file_contents, $uri, FileExists::Replace);
               }
             }
@@ -295,7 +302,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
     parent::submitForm($form, $form_state);
 
     // Clear the icons' cache and check if all icons' files are available.
-    $this->cache->delete('responsive_favicons:icons');
+    $this->cache->delete(_responsive_favicons_get_cache_id());
     $html = implode(PHP_EOL, $tags);
     $icons = _responsive_favicons_validate_tags($html);
     if (!empty($icons['metatags']['missing']) || !empty($icons['links']['missing'])) {

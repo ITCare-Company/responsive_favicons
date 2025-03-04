@@ -12,6 +12,9 @@ responsive_favicons.settings:
       label: 'Tags'
       sequence:
         type: string
+    cache_refresh_suffix:
+      type: boolean
+      label: 'Cache refresh suffix'
     remove_default:
       type: integer
       label: 'Remove default'
