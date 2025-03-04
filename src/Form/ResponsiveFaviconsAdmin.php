@@ -112,6 +112,9 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
         'visible' => [
           ':input[name="path_type"]' => ['value' => 'upload'],
         ],
+        'required' => [
+          ':input[name="path_type"]' => ['value' => 'upload'],
+        ],
       ],
     ];
     $form['local_path'] = [
@@ -140,6 +143,17 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
       '#states' => [
         'visible' => [
           ':input[name="path_type"]' => ['value' => 'upload'],
+        ],
+      ],
+    ];
+    $form['remove_existing_files'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Remove previously uploaded files'),
+      '#description' => $this->t('If checked, all existing files will be recursively deleted from the upload folder.  Use with care.'),
+      '#default_value' => FALSE,
+      '#states' => [
+        'visible' => [
+          ':input[name="files[upload]"]' => ['filled' => TRUE],
         ],
       ],
     ];
@@ -231,12 +245,18 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
 
         $files = $archive->listContents();
 
-        // You cannot validate the form in the submit handler.
+        // Display a warning if the zip file is empty.
         if (!$files) {
+          $this->messenger()->addError($this->t('The uploaded archive is empty.'));
           return;
         }
 
         $destination = 'public://' . $path;
+        // Remove existing files if requested.
+        if ($form_state->getValue('remove_existing_files')) {
+          $this->fileSystem->deleteRecursive($destination);
+        }
+        // Recreated directory to extract the new files.
         $this->fileSystem->prepareDirectory($destination, FileSystemInterface::CREATE_DIRECTORY);
 
         // Copy the files to the correct location.
