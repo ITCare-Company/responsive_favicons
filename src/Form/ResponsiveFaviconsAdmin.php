@@ -4,6 +4,7 @@ namespace Drupal\responsive_favicons\Form;
 
 use Drupal\Core\Archiver\ArchiverManager;
 use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Config\Config;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\File\Exception\FileException;
@@ -256,29 +257,23 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
             try {
               // Rewrite the paths of the JSON files.
               if (preg_match('/\.json$/', $file)) {
-                $file_contents = file_get_contents($this->fileSystem->realpath($uri));
+                $file_contents = file_get_contents($uri);
                 $find = preg_quote('"\/android-chrome', '/');
-                $replace = '"' . str_replace('/', '\/', _responsive_favicons_normalise_path('/android-chrome${1}'));
+                $replace = '"' . str_replace('/', '\/', _responsive_favicons_normalise_path('/android-chrome${1}', $config));
                 $file_contents = preg_replace('/' . $find . '([^"]*)/', $replace, $file_contents);
                 $this->fileSystem->saveData($file_contents, $uri, FileExists::Replace);
               }
               // Rewrite the paths of the XML files.
               elseif (preg_match('/\.xml$/', $file)) {
-                $file_contents = file_get_contents($this->fileSystem->realpath($uri));
-                $find = preg_quote('"/mstile', '/');
-                $replace = '"' . _responsive_favicons_normalise_path('/mstile${1}');
-                $file_contents = preg_replace('/' . $find . '([^"]*)/', $replace, $file_contents);
+                $file_contents = file_get_contents($uri);
+                $file_contents = $this->replacePath('/mstile', $file_contents, $config);
                 $this->fileSystem->saveData($file_contents, $uri, FileExists::Replace);
               }
               // Rewrite the paths of the WEBMANIFEST files.
               elseif (preg_match('/\.webmanifest$/', $file)) {
-                $file_contents = file_get_contents($this->fileSystem->realpath($uri));
-                $find = preg_quote('"/android-chrome', '/');
-                $replace = '"' . _responsive_favicons_normalise_path('/android-chrome${1}');
-                $file_contents = preg_replace('/' . $find . '([^"]*)/', $replace, $file_contents);
-                $find = preg_quote('"/web-app-manifest', '/');
-                $replace = '"' . _responsive_favicons_normalise_path('/web-app-manifest${1}');
-                $file_contents = preg_replace('/' . $find . '([^"]*)/', $replace, $file_contents);
+                $file_contents = file_get_contents($uri);
+                $file_contents = $this->replacePath('/android-chrome', $file_contents, $config);
+                $file_contents = $this->replacePath('/web-app-manifest', $file_contents, $config);
                 $this->fileSystem->saveData($file_contents, $uri, FileExists::Replace);
               }
             }
@@ -302,12 +297,35 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
     parent::submitForm($form, $form_state);
 
     // Clear the icons' cache and check if all icons' files are available.
-    $this->cache->delete(_responsive_favicons_get_cache_id());
+    $this->cache->delete(_responsive_favicons_get_cache_id($config));
     $html = implode(PHP_EOL, $tags);
-    $icons = _responsive_favicons_validate_tags($html);
+    $icons = _responsive_favicons_validate_tags($html, $config);
     if (!empty($icons['metatags']['missing']) || !empty($icons['links']['missing'])) {
       $this->messenger()->addWarning($this->t('Some icon files seem to be missing.  Check your configuration.'));
     }
+  }
+
+  /**
+   * Replace URLs starting with a specific prefix.
+   *
+   * @param string $prefix
+   *   The prefix of the URLs to replace.
+   * @param string $file_contents
+   *   The content to search for replacements.
+   * @param \Drupal\Core\Config\Config $config
+   *   The module configuration.
+   *
+   * @return string
+   *   The result content with the replaced URLs.
+   */
+  private function replacePath(string $prefix, string $file_contents, Config $config): string {
+    return preg_replace_callback(
+      '/"' . preg_quote($prefix, '/') . '([^"]*)/',
+      function ($matches) use ($prefix, $config) {
+        return '"' . _responsive_favicons_normalise_path($prefix . $matches[1], $config);
+      },
+      $file_contents
+    );
   }
 
   /**

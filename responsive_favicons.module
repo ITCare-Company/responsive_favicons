@@ -7,7 +7,6 @@
 
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Component\Utility\UrlHelper;
-use Drupal\Core\StreamWrapper\PublicStream;
 
 /**
  * Implements hook_help().
@@ -75,7 +74,7 @@ function responsive_favicons_load_all_icons() {
   $icons = &drupal_static(__FUNCTION__);
   if (!isset($icons)) {
     $config = \Drupal::config('responsive_favicons.settings');
-    $cid = _responsive_favicons_get_cache_id();
+    $cid = _responsive_favicons_get_cache_id($config);
     if ($cached = \Drupal::cache()->get($cid)) {
       $icons = $cached->data;
     }
@@ -95,7 +94,7 @@ function responsive_favicons_load_all_icons() {
       }
       else {
         $html = implode(PHP_EOL, $tags);
-        $icons = _responsive_favicons_validate_tags($html);
+        $icons = _responsive_favicons_validate_tags($html, $config);
         \Drupal::cache()->set($cid, $icons);
       }
     }
@@ -110,8 +109,10 @@ function responsive_favicons_load_all_icons() {
  * @return string
  *   The icons' cache identifier.
  */
-function _responsive_favicons_get_cache_id() {
-  return 'responsive_favicons:icons';
+function _responsive_favicons_get_cache_id($config) {
+  $type = $config->get('path_type');
+  $path = $config->get('path');
+  return "responsive_favicons:$type:$path:icons";
 }
 
 /**
@@ -123,12 +124,19 @@ function _responsive_favicons_get_cache_id() {
  *
  * @param string $html
  *   The HTML tag.
+ * @param mixed|null $config
+ *   The module configuration.
  *
  * @return array
  *   The attributes of found and missing links and meta-tags.
  */
-function _responsive_favicons_validate_tags($html) {
+function _responsive_favicons_validate_tags($html, $config = NULL) {
   global $base_path;
+
+  // Use default config if not provided as parameter.
+  if (is_null($config)) {
+    $config = \Drupal::config('responsive_favicons.settings');
+  }
 
   $found_links = [];
   $missing_links = [];
@@ -153,7 +161,7 @@ function _responsive_favicons_validate_tags($html) {
       foreach ($link->attributes as $attr) {
         $attributes[$attr->nodeName] = $attr->nodeValue;
       }
-      $url_path = _responsive_favicons_normalise_path($attributes['href']);
+      $url_path = _responsive_favicons_normalise_path($attributes['href'], $config);
       $file_path = parse_url($url_path, PHP_URL_PATH);
       $attributes['href'] = $url_path;
       if (file_exists($docroot . $file_path) && is_readable($docroot . $file_path)) {
@@ -211,13 +219,17 @@ function _responsive_favicons_validate_tags($html) {
  *
  * @param string $file_path
  *   The filename of the icon.
+ * @param mixed|null $config
+ *   The module configuration.
  *
  * @return string
  *   The full relative path to the icon within public files.
  */
-function _responsive_favicons_normalise_path($file_path) {
-  $config = \Drupal::config('responsive_favicons.settings');
-
+function _responsive_favicons_normalise_path($file_path, $config = NULL) {
+  // Use default config if not provided as parameter.
+  if (is_null($config)) {
+    $config = \Drupal::config('responsive_favicons.settings');
+  }
   // Remove absolute URLs.
   if (UrlHelper::isExternal($file_path)) {
     $file_path = str_replace(\Drupal::request()->getSchemeAndHttpHost(), '', $file_path);
@@ -226,18 +238,23 @@ function _responsive_favicons_normalise_path($file_path) {
   // Convert backslashes when running on Windows.
   $file_path = str_replace('\\', '/', $file_path);
 
+  $file_url_generator = \Drupal::service('file_url_generator');
+  if ($config->get('path_type') === 'upload') {
+    $file_uri = 'public://' . $config->get('path') . $file_path;
+    $file_path = $file_url_generator->generateString($file_uri);
+  }
+  else {
+    $file_uri = $config->get('path') . $file_path;
+    $file_path = $file_url_generator->transformRelative($file_uri);
+  }
+
   // Append browser cache refresh suffix.
-  if ($config->get('cache_refresh_suffix') === TRUE) {
+  if ($config->get('cache_refresh_suffix')) {
     $query_string = \Drupal::service('asset.query_string')->get();
     if (!empty($query_string)) {
       $file_path .= '?' . $query_string;
     }
   }
 
-  if ($config->get('path_type') === 'upload') {
-    return '/' . PublicStream::basePath() . '/' . $config->get('path') . $file_path;
-  }
-  else {
-    return $config->get('path') . $file_path;
-  }
+  return $file_path;
 }
