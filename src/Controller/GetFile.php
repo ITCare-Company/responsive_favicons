@@ -3,28 +3,43 @@
 namespace Drupal\responsive_favicons\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Mime\MimeTypeGuesserInterface;
 
 /**
- * Class GetFile.
+ * The GetFile controller implementation.
  *
  * @package Drupal\responsive_favicons\Controller
  */
 class GetFile extends ControllerBase {
 
+  public function __construct(protected MimeTypeGuesserInterface $mimeTypeGuesser) {}
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    // @phpstan-ignore-next-line
+    return new static(
+      $container->get('file.mime_type.guesser'),
+    );
+  }
+
   /**
    * Creates a file object for the requested icon path.
    *
    * @param string $file_path
-   *   the icon filename.
+   *   The icon filename.
+   *
    * @return object
-   *   a file object.
+   *   A file object.
    */
   private function getFile($file_path) {
     $config = $this->config('responsive_favicons.settings');
-    if ($config->get('path_type') == 'upload') {
+    if ($config->get('path_type') === 'upload') {
       $uri = 'public://' . $config->get('path') . $file_path;
     }
     else {
@@ -33,7 +48,7 @@ class GetFile extends ControllerBase {
 
     $file = new \stdClass();
     $file->uri = $uri;
-    $file->filemime = \Drupal::service('file.mime_type.guesser')->guessMimeType($uri);
+    $file->filemime = $this->mimeTypeGuesser->guessMimeType($uri);
     $file->filesize = @filesize($uri);
 
     return $file;
@@ -42,7 +57,7 @@ class GetFile extends ControllerBase {
   /**
    * Attempts to send the raw file back in the response.
    *
-   * @param $request
+   * @param \Symfony\Component\HttpFoundation\Request $request
    *   a Request object.
    */
   public function deliver(Request $request) {
@@ -64,4 +79,5 @@ class GetFile extends ControllerBase {
     $response->send();
     exit;
   }
+
 }

@@ -2,11 +2,15 @@
 
 namespace Drupal\responsive_favicons\Form;
 
+use Drupal\Core\Archiver\ArchiverManager;
+use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\File\Exception\FileException;
 use Drupal\Core\File\Exception\FileWriteException;
 use Drupal\Core\File\FileExists;
 use Drupal\Core\File\FileSystemInterface;
+use Drupal\Core\File\FileUrlGenerator;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Messenger\MessengerTrait;
@@ -15,7 +19,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Class ResponsiveFaviconsAdmin.
+ * Responsive Favicons settings form.
  *
  * @package Drupal\responsive_favicons\Form
  */
@@ -25,35 +29,44 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
   use StringTranslationTrait;
 
   /**
-   * The file system service.
-   *
-   * @var \Drupal\Core\File\FileSystemInterface
-   */
-  protected FileSystemInterface $fileSystem;
-
-  /**
    * Constructs a ResponsiveFaviconsAdmin object.
    *
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The factory for configuration objects.
+   * @param \Drupal\Core\Config\TypedConfigManagerInterface $typedConfigManager
+   *   The typed config manager.
    * @param \Drupal\Core\File\FileSystemInterface $fileSystem
    *   The file system service.
-   * @param \Drupal\Core\Config\TypedConfigManagerInterface|null $typedConfigManager
-   *   The typed config manager.
+   * @param \Drupal\Core\File\FileUrlGenerator $fileUrlGenerator
+   *   The file URL generator service.
+   * @param \Drupal\Core\Archiver\ArchiverManager $archiverManager
+   *   The archiver manager.
+   * @param \Drupal\Core\Cache\CacheBackendInterface $cache
+   *   The cache service.
    */
-  public function __construct(ConfigFactoryInterface $config_factory, FileSystemInterface $fileSystem, $typedConfigManager = NULL) {
+  public function __construct(
+    ConfigFactoryInterface $config_factory,
+    TypedConfigManagerInterface $typedConfigManager,
+    protected FileSystemInterface $fileSystem,
+    protected FileUrlGenerator $fileUrlGenerator,
+    protected ArchiverManager $archiverManager,
+    protected CacheBackendInterface $cache,
+  ) {
     parent::__construct($config_factory, $typedConfigManager);
-    $this->fileSystem = $fileSystem;
   }
 
   /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
+    // @phpstan-ignore-next-line
     return new static(
       $container->get('config.factory'),
+      $container->get('config.typed'),
       $container->get('file_system'),
-      $container->get('config.typed') ?? NULL,
+      $container->get('file_url_generator'),
+      $container->get('plugin.manager.archiver'),
+      $container->get('cache.default'),
     );
   }
 
@@ -92,7 +105,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
       '#type' => 'textfield',
       '#title' => $this->t('Path to responsive favicon files'),
       '#description' => $this->t('A local file system path where favicon files will be stored. This directory must exist and be writable by Drupal. An attempt will be made to create this directory if it does not already exist.'),
-      '#field_prefix' => \Drupal::service('file_url_generator')->generateAbsoluteString('public://'),
+      '#field_prefix' => $this->fileUrlGenerator->generateAbsoluteString('public://'),
       '#default_value' => $config->get('path'),
       '#states' => [
         'visible' => [
@@ -177,7 +190,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
     // Checkbox.
     $config->set('remove_default', $form_state->getValue('remove_default'));
 
-    // If path type is upload handle uploaded zip file.
+    // If the path type is upload, handle the uploaded zip file.
     if ($path_type === 'upload') {
       $path = rtrim($form_state->getValue('upload_path'));
       $config->set('path', $path);
@@ -280,6 +293,14 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
     // Save the settings.
     $config->save();
     parent::submitForm($form, $form_state);
+
+    // Clear the icons' cache and check if all icons' files are available.
+    $this->cache->delete('responsive_favicons:icons');
+    $html = implode(PHP_EOL, $tags);
+    $icons = _responsive_favicons_validate_tags($html);
+    if (!empty($icons['metatags']['missing']) || !empty($icons['links']['missing'])) {
+      $this->messenger()->addWarning($this->t('Some icon files seem to be missing.  Check your configuration.'));
+    }
   }
 
   /**
@@ -332,7 +353,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
    * @throws \Exception
    */
   private function archiveExtract($file, $directory) {
-    $archiver = \Drupal::service('plugin.manager.archiver')->getInstance(['filepath' => $file]);
+    $archiver = $this->archiverManager->getInstance(['filepath' => $file]);
     if (!$archiver) {
       throw new \Exception($this->t('Cannot extract %file, not a valid archive.', ['%file' => $file]));
     }
