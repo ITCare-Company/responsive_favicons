@@ -41,6 +41,8 @@ class DefaultFavicons implements ContainerInjectionInterface {
       '/apple-touch-icon.png',
       '/apple-touch-icon-precomposed.png',
       '/browserconfig.xml',
+      '/site.webmanifest',
+      '/favicon.svg',
     ];
     // Try to avoid clashing with the favicon module.
     if (!$this->moduleHandler->moduleExists('favicon')) {

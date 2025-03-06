@@ -31,7 +31,8 @@ the icons, in each site's respective public files directory.
    site. Recommended." - this is because Drupal will rewrite the URLs based on
    your configuration of the module for you.
 
-2. Install Responsive Favicons module as you install a contributed Drupal module.
+2. Install Responsive Favicons module as you install a contributed Drupal
+   module.
    See https://www.drupal.org/docs/extending-drupal/installing-modules
 
 3. Go to /admin/config/user-interface/responsive_favicons to configure the
@@ -40,32 +41,26 @@ the icons, in each site's respective public files directory.
    Here you will need to paste in the HTML provided by realfavicongenerator.net
    and upload the zip file they provided you with.
 
-4. [optional] You can also allow this module to take over common paths like:
+4. This module will take over the following common paths if the corresponding
+   files exist:
 
-   * `favicon.ico`
-   * `favicon.svg`
-   * `apple-touch-icon.png`
-   * `site.webmanifest`
+   * `/favicon.ico`
+   * `/favicon.svg`
+   * `/apple-touch-icon.png`
+   * `/apple-touch-icon-precomposed.png`
+   * `/site.webmanifest`
+   * `/browserconfig.xml` _(deprecated)_
 
-   In order to do this you need to:
-
-   1) Comment out the line
-
-   ```
-   #RewriteCond %{REQUEST_URI} !=/favicon.ico
-   ```
-
-   in the Drupal root `.htaccess` file.
-
-   2) Alter the config setting `system.performance.fast_404.exclude_paths` in your `settings.php` file:
+   To ensure that the `/favicon.ico` path is properly handled by the module, you
+   must comment out the following line in the Drupal `.htaccess` file:
 
    ```
-   $config['system.performance']['fast_404']['exclude_paths'] = '/\/(?:styles)\/|(?:system\/files)\/|favicon\.ico|apple-touch-icon(?:-precomposed)?\.png|browserconfig\.xml/|site\.webmanifest';
+   # RewriteCond %{REQUEST_URI} !=/favicon.ico
    ```
 
-   Your site will now output the required metadata for the favicons to work. You can
-   always check the status report page to find out if your site has been correctly
-   configured.
+   Your site will now output the required metadata for the favicons to work. You
+   can always check the status report page to find out if your site has been
+   correctly configured.
 
    **N.B.** The 'favicon' module duplicates some functionality of responsive
    favicons, so it is preferred that you only install one of the two modules.
