@@ -5,6 +5,7 @@
  * Contains responsive_favicons.module.
  */
 
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Component\Utility\UrlHelper;
 
@@ -95,7 +96,8 @@ function responsive_favicons_load_all_icons() {
       else {
         $html = implode(PHP_EOL, $tags);
         $icons = _responsive_favicons_validate_tags($html, $config);
-        \Drupal::cache()->set($cid, $icons);
+        $cache_tags = $config->getCacheTags();
+        \Drupal::cache()->set($cid, $icons, Cache::PERMANENT, $cache_tags);
       }
     }
   }

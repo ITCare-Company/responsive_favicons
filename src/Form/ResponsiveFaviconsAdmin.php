@@ -316,8 +316,12 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
     $config->save();
     parent::submitForm($form, $form_state);
 
-    // Clear the icons' cache and check if all icons' files are available.
+    // Clear the icons' cache.
+    // Needed until the following domain module issue gets fixed:
+    // https://www.drupal.org/project/domain/issues/3397693
     $this->cache->delete(_responsive_favicons_get_cache_id($config));
+
+    // Check if all icons' files are available.
     $html = implode(PHP_EOL, $tags);
     $icons = _responsive_favicons_validate_tags($html, $config);
     if (!empty($icons['metatags']['missing']) || !empty($icons['links']['missing'])) {
