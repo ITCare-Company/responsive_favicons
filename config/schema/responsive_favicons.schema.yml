@@ -13,7 +13,7 @@ responsive_favicons.settings:
       sequence:
         type: string
     cache_refresh_suffix:
-      type: boolean
+      type: integer
       label: 'Cache refresh suffix'
     remove_default:
       type: integer

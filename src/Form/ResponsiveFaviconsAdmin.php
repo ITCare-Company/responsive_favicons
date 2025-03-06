@@ -161,7 +161,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Add a cache refresh suffix to icons URLs'),
       '#description' => $this->t("Allow updating icons without requiring a manual browser cache reset."),
-      '#default_value' => $config->get('cache_refresh_suffix') ?? FALSE,
+      '#default_value' => $config->get('cache_refresh_suffix') ?? 0,
     ];
     $form['remove_default'] = [
       '#type' => 'checkbox',
