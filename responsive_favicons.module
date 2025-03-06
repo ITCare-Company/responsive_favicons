@@ -26,6 +26,15 @@ function responsive_favicons_help($route_name, RouteMatchInterface $route_match)
 }
 
 /**
+ * Implements hook_preprocess_HOOK().
+ *
+ * Hook_page_attachments doesn't run for maintenance-page.
+ */
+function responsive_favicons_preprocess_maintenance_page(array &$variables) {
+  responsive_favicons_page_attachments($variables);
+}
+
+/**
  * Implements hook_page_attachments().
  *
  * Adds responsive favicons to HTML head. A trailing newline is added to ensure
