@@ -12,7 +12,7 @@ use Drupal\Core\File\Exception\FileException;
 use Drupal\Core\File\Exception\FileWriteException;
 use Drupal\Core\File\FileExists;
 use Drupal\Core\File\FileSystemInterface;
-use Drupal\Core\File\FileUrlGenerator;
+use Drupal\Core\File\FileUrlGeneratorInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Messenger\MessengerTrait;
@@ -40,7 +40,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
    *   The typed config manager.
    * @param \Drupal\Core\File\FileSystemInterface $fileSystem
    *   The file system service.
-   * @param \Drupal\Core\File\FileUrlGenerator $fileUrlGenerator
+   * @param \Drupal\Core\File\FileUrlGeneratorInterface $fileUrlGenerator
    *   The file URL generator service.
    * @param \Drupal\Core\Archiver\ArchiverManager $archiverManager
    *   The archiver manager.
@@ -53,7 +53,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
     ConfigFactoryInterface $config_factory,
     TypedConfigManagerInterface $typedConfigManager,
     protected FileSystemInterface $fileSystem,
-    protected FileUrlGenerator $fileUrlGenerator,
+    protected FileUrlGeneratorInterface $fileUrlGenerator,
     protected ArchiverManager $archiverManager,
     protected CacheBackendInterface $cache,
     protected ModuleHandlerInterface $moduleHandler,
