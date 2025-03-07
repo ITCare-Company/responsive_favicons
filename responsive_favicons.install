@@ -25,10 +25,11 @@ function responsive_favicons_requirements($phase) {
         'severity' => REQUIREMENT_ERROR,
       ];
     }
-    if (!empty($tags['found'])) {
+    if (!empty($tags['links']) || !empty($tags['metatags'])) {
+      $count = count($tags['links']) + count($tags['metatags']);
       $requirements['responsive_favicons_found'] = [
         'title' => t('Responsive favicons'),
-        'value' => \Drupal::translation()->formatPlural(count($tags['found']), 'Found 1 favicon', 'Found @count favicons'),
+        'value' => \Drupal::translation()->formatPlural($count, 'Found 1 favicon tag', 'Found @count favicon tags'),
         'severity' => REQUIREMENT_OK,
       ];
     }
@@ -39,6 +40,18 @@ function responsive_favicons_requirements($phase) {
       $requirements['responsive_favicons_favicon_module'] = [
         'title' => t('Responsive favicons'),
         'value' => t('You do not need to have the favicon module enabled when you have the responsive favicons module enabled. Please see the README for more information.'),
+        'severity' => REQUIREMENT_WARNING,
+      ];
+    }
+
+    // Point out the potential conflict with the pwa module if a web manifest
+    // file is present.
+    if ($moduleHandler->moduleExists('pwa') && _responsive_favicons_has_link($tags, 'rel', 'manifest')) {
+      $requirements['responsive_favicons_pwa_module'] = [
+        'title' => t('Responsive favicons'),
+        'value' => t('The PWA module is active and a conflicting web manifest file has been declared in the Responsive Favicons <a href=":url">configuration</a>. Please remove it.', [
+          ':url' => Url::fromRoute('responsive_favicons.admin')->toString(),
+        ]),
         'severity' => REQUIREMENT_WARNING,
       ];
     }

@@ -42,16 +42,16 @@ function responsive_favicons_preprocess_maintenance_page(array &$variables) {
  */
 function responsive_favicons_page_attachments(array &$page) {
   $tags = responsive_favicons_load_all_icons();
-  if (!empty($tags['links']['found'])) {
-    foreach ($tags['links']['found'] as $link_attributes) {
+  if (!empty($tags['links'])) {
+    foreach ($tags['links'] as $link_attributes) {
       $page['#attached']['html_head_link'][] = [
         $link_attributes,
         TRUE,
       ];
     }
   }
-  if (!empty($tags['metatags']['found'])) {
-    foreach ($tags['metatags']['found'] as $index => $meta_attributes) {
+  if (!empty($tags['metatags'])) {
+    foreach ($tags['metatags'] as $index => $meta_attributes) {
       $meta = [
         '#tag' => 'meta',
         '#attributes' => $meta_attributes,
@@ -92,14 +92,9 @@ function responsive_favicons_load_all_icons() {
       $tags = $config->get('tags');
       if (empty($tags)) {
         $icons = [
-          'metatags' => [
-            'found' => [],
-            'missing' => [],
-          ],
-          'links' => [
-            'found' => [],
-            'missing' => [],
-          ],
+          'metatags' => [],
+          'links' => [],
+          'missing' => [],
         ];
       }
       else {
@@ -149,10 +144,9 @@ function _responsive_favicons_validate_tags($html, $config = NULL) {
     $config = \Drupal::config('responsive_favicons.settings');
   }
 
-  $found_links = [];
-  $missing_links = [];
-  $found_metatags = [];
-  $missing_metatags = [];
+  $links = [];
+  $metatags = [];
+  $missing = [];
 
   $dom = new DOMDocument();
   $dom->loadHTML($html);
@@ -162,11 +156,11 @@ function _responsive_favicons_validate_tags($html, $config = NULL) {
   $docroot = preg_replace('/' . preg_quote($base_path, '/') . '$/', '/', DRUPAL_ROOT);
 
   // Find all the apple touch icons.
-  $links = $dom->getElementsByTagName('link');
+  $dom_links = $dom->getElementsByTagName('link');
 
   // Loop through link tags and store their attributes in an associative array.
-  /** @var DOMElement $meta */
-  foreach ($links as $link) {
+  /** @var DOMElement $link */
+  foreach ($dom_links as $link) {
     if ($link->hasAttributes()) {
       $attributes = [];
       foreach ($link->attributes as $attr) {
@@ -176,17 +170,19 @@ function _responsive_favicons_validate_tags($html, $config = NULL) {
       $file_path = parse_url($url_path, PHP_URL_PATH);
       $attributes['href'] = $url_path;
       if (file_exists($docroot . $file_path) && is_readable($docroot . $file_path)) {
-        $found_links[] = $attributes;
+        $links[] = $attributes;
       }
       else {
-        $missing_links[] = $attributes;
+        $missing[] = $dom->saveHTML($link);
       }
     }
   }
 
   // Find any Windows 8 meta tags.
-  $metatags = $dom->getElementsByTagName('meta');
-  foreach ($metatags as $meta) {
+  $dom_metatags = $dom->getElementsByTagName('meta');
+
+  /** @var DOMElement $meta */
+  foreach ($dom_metatags as $meta) {
     if ($meta->hasAttributes()) {
       $attributes = [];
       foreach ($meta->attributes as $attr) {
@@ -200,28 +196,23 @@ function _responsive_favicons_validate_tags($html, $config = NULL) {
         $attributes['content'] = $url_path;
 
         if (file_exists($docroot . $file_path) && is_readable($docroot . $file_path)) {
-          $found_metatags[] = $attributes;
+          $metatags[] = $attributes;
         }
         else {
-          $missing_metatags[] = $attributes;
+          $missing[] = $dom->saveHTML($meta);
         }
       }
       // Add any other meta-tags and assume they contain no images.
       else {
-        $found_metatags[] = $attributes;
+        $metatags[] = $attributes;
       }
     }
   }
 
   return [
-    'metatags' => [
-      'found' => $found_metatags,
-      'missing' => $missing_metatags,
-    ],
-    'links' => [
-      'found' => $found_links,
-      'missing' => $missing_links,
-    ],
+    'metatags' => $metatags,
+    'links' => $links,
+    'missing' => $missing,
   ];
 }
 
@@ -268,4 +259,33 @@ function _responsive_favicons_normalise_path($file_path, $config = NULL) {
   }
 
   return $file_path;
+}
+
+/**
+ * Check if a link with the specified attribute name and value exists.
+ *
+ * @param array $tags
+ *   The array of "link" and "meta" tags.
+ * @param string $attribute_name
+ *   The link attribute name we are looking for.
+ * @param string $attribute_value
+ *   The link attribute value we are looking for.
+ *
+ * @return bool
+ *   TRUE if a corresponding link has been found, FALSE otherwise.
+ */
+function _responsive_favicons_has_link(
+  array $tags,
+  string $attribute_name,
+  string $attribute_value,
+) {
+  $links = $tags['links'];
+  foreach ($links as $link_attributes) {
+    foreach ($link_attributes as $name => $value) {
+      if ($name === $attribute_name && $value === $attribute_value) {
+        return TRUE;
+      }
+    }
+  }
+  return FALSE;
 }

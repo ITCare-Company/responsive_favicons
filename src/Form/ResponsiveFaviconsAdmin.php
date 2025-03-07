@@ -7,6 +7,7 @@ use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Config\Config;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\TypedConfigManagerInterface;
+use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\File\Exception\FileException;
 use Drupal\Core\File\Exception\FileWriteException;
 use Drupal\Core\File\FileExists;
@@ -17,6 +18,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Messenger\MessengerTrait;
 use Drupal\Core\Site\Settings;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\Url;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -44,6 +46,8 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
    *   The archiver manager.
    * @param \Drupal\Core\Cache\CacheBackendInterface $cache
    *   The cache service.
+   * @param \Drupal\Core\Extension\ModuleHandlerInterface $moduleHandler
+   *   The module handler service.
    */
   public function __construct(
     ConfigFactoryInterface $config_factory,
@@ -52,6 +56,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
     protected FileUrlGenerator $fileUrlGenerator,
     protected ArchiverManager $archiverManager,
     protected CacheBackendInterface $cache,
+    protected ModuleHandlerInterface $moduleHandler,
   ) {
     parent::__construct($config_factory, $typedConfigManager);
   }
@@ -68,6 +73,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
       $container->get('file_url_generator'),
       $container->get('plugin.manager.archiver'),
       $container->get('cache.default'),
+      $container->get('module_handler'),
     );
   }
 
@@ -324,8 +330,17 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
     // Check if all icons' files are available.
     $html = implode(PHP_EOL, $tags);
     $icons = _responsive_favicons_validate_tags($html, $config);
-    if (!empty($icons['metatags']['missing']) || !empty($icons['links']['missing'])) {
-      $this->messenger()->addWarning($this->t('Some icon files seem to be missing.  Check your configuration.'));
+    if (!empty($icons['missing'])) {
+      $this->messenger()->addWarning($this->t('The favicon files are missing for the following tags.<br/><code>@tags</code>', [
+        ':url' => Url::fromRoute('responsive_favicons.admin')->toString(),
+        '@tags' => implode(', ', $icons['missing']),
+      ]));
+    }
+
+    // Display a warning if a manifest link is defined and the pwa module is
+    // active.
+    if ($this->moduleHandler->moduleExists('pwa') && _responsive_favicons_has_link($icons, 'rel', 'manifest')) {
+      $this->messenger()->addWarning($this->t('The PWA module is active and a conflicting web manifest has been declared in the Favicon tags field. Please remove it.'));
     }
   }
 
