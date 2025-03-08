@@ -4,8 +4,8 @@ namespace Drupal\responsive_favicons\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Mime\MimeTypeGuesserInterface;
 
@@ -68,12 +68,22 @@ class GetFile extends ControllerBase {
       throw new NotFoundHttpException();
     }
 
-    $response = new Response();
+    $headers = [
+      'Content-Length' => $file->filesize,
+      'Content-Type' => $file->filemime,
+    ];
 
-    $response->headers->set('Content-Type', $file->filemime);
-    $response->headers->set('Content-Disposition', 'inline');
-    $response->headers->set('Content-Length', $file->filesize);
-    $response->setContent(file_get_contents($file->uri));
+    $response = new BinaryFileResponse($file->uri, 200, $headers, TRUE, NULL, TRUE);
+
+    // Retrieve the default max-age from the system performance configuration.
+    $max_age = $this->config('system.performance')->get('cache.page.max_age');
+
+    // If the browser page cache is enabled.
+    if ($max_age > 0) {
+      // Apply cache age headers to the response.
+      $response->setMaxAge($max_age);
+      $response->setSharedMaxAge($max_age);
+    }
 
     $response->prepare($request);
     $response->send();
