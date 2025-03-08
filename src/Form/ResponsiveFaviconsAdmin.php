@@ -169,6 +169,12 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
       '#description' => $this->t("Allow updating icons without requiring a manual browser cache reset."),
       '#default_value' => $config->get('cache_refresh_suffix') ?? 0,
     ];
+    $form['show_missing'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Show tags even if files are missing'),
+      '#description' => $this->t('Allow displaying tags even if the referenced icon files are not available.'),
+      '#default_value' => $config->get('show_missing') ?? 0,
+    ];
     $form['remove_default'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Remove default favicon from Drupal'),
@@ -216,6 +222,7 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
 
     // Checkboxes.
     $config->set('cache_refresh_suffix', $form_state->getValue('cache_refresh_suffix'));
+    $config->set('show_missing', $form_state->getValue('show_missing'));
     $config->set('remove_default', $form_state->getValue('remove_default'));
 
     // If the path type is upload, handle the uploaded zip file.

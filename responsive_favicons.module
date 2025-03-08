@@ -202,6 +202,7 @@ function _responsive_favicons_process_dom_links(
   string $docroot,
   mixed $config,
 ) {
+  $show_missing = $config->get('show_missing') ?? 0;
   /** @var DOMElement $link */
   foreach ($dom_links as $link) {
     if ($link->hasAttributes()) {
@@ -215,6 +216,9 @@ function _responsive_favicons_process_dom_links(
         $links[] = $attributes;
       }
       else {
+        if ($show_missing) {
+          $links[] = $attributes;
+        }
         $missing[] = $dom->saveHTML($link);
       }
     }
@@ -245,6 +249,7 @@ function _responsive_favicons_process_dom_metatags(
   string $docroot,
   mixed $config,
 ) {
+  $show_missing = $config->get('show_missing') ?? 0;
   /** @var DOMElement $meta */
   foreach ($dom_metatags as $meta) {
     if ($meta->hasAttributes()) {
@@ -260,6 +265,9 @@ function _responsive_favicons_process_dom_metatags(
           $metatags[] = $attributes;
         }
         else {
+          if ($show_missing) {
+            $metatags[] = $attributes;
+          }
           $missing[] = $dom->saveHTML($meta);
         }
       }
