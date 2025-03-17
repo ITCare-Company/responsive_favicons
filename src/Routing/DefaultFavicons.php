@@ -3,7 +3,7 @@
 namespace Drupal\responsive_favicons\Routing;
 
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
-use Drupal\Core\Extension\ModuleHandler;
+use Drupal\Core\Extension\ModuleHandlerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Routing\RouteCollection;
 use Symfony\Component\Routing\Route;
@@ -16,7 +16,7 @@ use Symfony\Component\Routing\Route;
  */
 class DefaultFavicons implements ContainerInjectionInterface {
 
-  public function __construct(protected ModuleHandler $moduleHandler) {}
+  public function __construct(protected ModuleHandlerInterface $moduleHandler) {}
 
   /**
    * {@inheritdoc}
