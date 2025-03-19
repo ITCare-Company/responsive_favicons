@@ -141,6 +141,15 @@ function _responsive_favicons_get_cache_id($config) {
 function _responsive_favicons_validate_tags($html, $config = NULL) {
   global $base_path;
 
+  // Don't process DOM if HTML code is empty.
+  if (empty($html)) {
+    return [
+      'links' => [],
+      'metatags' => [],
+      'missing' => [],
+    ];
+  }
+
   // Use default config if not provided as parameter.
   if (is_null($config)) {
     $config = \Drupal::config('responsive_favicons.settings');
@@ -153,7 +162,7 @@ function _responsive_favicons_validate_tags($html, $config = NULL) {
   $dom = new DOMDocument();
   $dom->loadHTML($html);
 
-  // DRUPAL_ROOT contains the sub directory of the Drupal install (if present),
+  // DRUPAL_ROOT contains the subdirectory of the Drupal install (if present),
   // in our case we do not want this as $file_path already contains this.
   $docroot = preg_replace('/' . preg_quote($base_path, '/') . '$/', '/', DRUPAL_ROOT);
 
