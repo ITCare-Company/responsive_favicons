@@ -62,6 +62,12 @@ class DefaultFavicons implements ContainerInjectionInterface {
           '_access' => 'TRUE',
         ]
       );
+
+      // Prevent redirect from redirecting (normalizing) favicon routes.
+      if ($this->moduleHandler->moduleExists('redirect')) {
+        $route->setDefault('_disable_route_normalizer', TRUE);
+      }
+
       // Add the route under a unique key.
       $key = preg_replace("/[^A-Za-z]/", '', $icon);
       $route_collection->add('responsive_favicons.' . $key, $route);
