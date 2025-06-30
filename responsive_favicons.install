@@ -18,7 +18,7 @@ function responsive_favicons_requirements($phase) {
     if (!empty($tags['missing'])) {
       $requirements['responsive_favicons_missing'] = [
         'title' => t('Responsive favicons'),
-        'description' => t('The favicon files are missing for the following tags. Go to <a href=":url">configuration page</a> to add missing files.<br/><code>@tags</code>', [
+        'description' => t('The favicon files referenced in the following HTML tags either cannot be found, or include unnecessary cache-busting parameters (which must be removed).<br/>Please use the <a href=":url">configuration page</a> to amend the HTML and/or upload the missing favicon files.<br/><code>@tags</code>', [
           ':url' => Url::fromRoute('responsive_favicons.admin')->toString(),
           '@tags' => implode(', ', $tags['missing']),
         ]),
