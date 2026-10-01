@@ -1,7 +1,7 @@
 name: 'Responsive Favicons'
 type: module
 description: 'Add responsive favicons to your site based on the code from https://realfavicongenerator.net/'
-core_version_requirement: ^10.3 || ^11
+core_version_requirement: ^10.3 || ^11 || ^12
 package: User interface
 configure: responsive_favicons.admin
 dependencies:
