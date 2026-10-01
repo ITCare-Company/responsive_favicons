@@ -22,7 +22,7 @@ function responsive_favicons_requirements($phase) {
           ':url' => Url::fromRoute('responsive_favicons.admin')->toString(),
           '@tags' => implode(', ', $tags['missing']),
         ]),
-        'severity' => REQUIREMENT_ERROR,
+        'severity' => (class_exists('\\Drupal\\Core\\Extension\\Requirement\\RequirementSeverity') ? \Drupal\Core\Extension\Requirement\RequirementSeverity::Error : REQUIREMENT_ERROR),
       ];
     }
     if (!empty($tags['links']) || !empty($tags['metatags'])) {
@@ -30,7 +30,7 @@ function responsive_favicons_requirements($phase) {
       $requirements['responsive_favicons_found'] = [
         'title' => t('Responsive favicons'),
         'value' => \Drupal::translation()->formatPlural($count, 'Found 1 favicon tag', 'Found @count favicon tags'),
-        'severity' => REQUIREMENT_OK,
+        'severity' => (class_exists('\\Drupal\\Core\\Extension\\Requirement\\RequirementSeverity') ? \Drupal\Core\Extension\Requirement\RequirementSeverity::OK : REQUIREMENT_OK),
       ];
     }
 
@@ -40,7 +40,7 @@ function responsive_favicons_requirements($phase) {
       $requirements['responsive_favicons_favicon_module'] = [
         'title' => t('Responsive favicons'),
         'value' => t('You do not need to have the favicon module enabled when you have the responsive favicons module enabled. Please see the README for more information.'),
-        'severity' => REQUIREMENT_WARNING,
+        'severity' => (class_exists('\\Drupal\\Core\\Extension\\Requirement\\RequirementSeverity') ? \Drupal\Core\Extension\Requirement\RequirementSeverity::Warning : REQUIREMENT_WARNING),
       ];
     }
 
@@ -52,7 +52,7 @@ function responsive_favicons_requirements($phase) {
         'value' => t('The PWA module is active and a conflicting web manifest file has been declared in the Responsive Favicons <a href=":url">configuration</a>. Please remove it.', [
           ':url' => Url::fromRoute('responsive_favicons.admin')->toString(),
         ]),
-        'severity' => REQUIREMENT_WARNING,
+        'severity' => (class_exists('\\Drupal\\Core\\Extension\\Requirement\\RequirementSeverity') ? \Drupal\Core\Extension\Requirement\RequirementSeverity::Warning : REQUIREMENT_WARNING),
       ];
     }
   }
