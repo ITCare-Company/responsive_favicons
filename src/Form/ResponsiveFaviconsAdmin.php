@@ -2,7 +2,6 @@
 
 namespace Drupal\responsive_favicons\Form;
 
-use Drupal\Core\Archiver\ArchiverManager;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Config\Config;
 use Drupal\Core\Config\ConfigFactoryInterface;
@@ -42,8 +41,6 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
    *   The file system service.
    * @param \Drupal\Core\File\FileUrlGeneratorInterface $fileUrlGenerator
    *   The file URL generator service.
-   * @param \Drupal\Core\Archiver\ArchiverManager $archiverManager
-   *   The archiver manager.
    * @param \Drupal\Core\Cache\CacheBackendInterface $cache
    *   The cache service.
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $moduleHandler
@@ -54,7 +51,6 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
     TypedConfigManagerInterface $typedConfigManager,
     protected FileSystemInterface $fileSystem,
     protected FileUrlGeneratorInterface $fileUrlGenerator,
-    protected ArchiverManager $archiverManager,
     protected CacheBackendInterface $cache,
     protected ModuleHandlerInterface $moduleHandler,
   ) {
@@ -71,7 +67,6 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
       $container->get('config.typed'),
       $container->get('file_system'),
       $container->get('file_url_generator'),
-      $container->get('plugin.manager.archiver'),
       $container->get('cache.default'),
       $container->get('module_handler'),
     );
@@ -249,14 +244,12 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
       if (isset($local_cache)) {
         $directory = $this->extractDirectory();
         try {
-          $archive = $this->archiveExtract($local_cache, $directory);
+          $files = $this->archiveExtract($local_cache, $directory);
         }
         catch (\Exception $e) {
           $this->messenger()->addError($e->getMessage());
           return;
         }
-
-        $files = $archive->listContents();
 
         // Display a warning if the zip file is empty.
         if (!$files) {
@@ -413,28 +406,40 @@ class ResponsiveFaviconsAdmin extends ConfigFormBase {
   /**
    * Unpacks a downloaded archive file.
    *
+   * \Drupal\Core\Archiver\ArchiverManager (and the Zip/Tar plugins behind it)
+   * is fully removed in Drupal core 12 with no replacement
+   * (drupal.org/node/3556927). The upload form above already restricts the
+   * upload to a .zip file (see the 'FileExtension' => ['extensions' => 'zip']
+   * validator), so a direct \ZipArchive call covers every real input.
+   *
    * @param string $file
    *   The filename of the archive you wish to extract.
    * @param string $directory
    *   The directory you wish to extract the archive into.
    *
-   * @return \Drupal\Core\Archiver\ArchiverInterface
-   *   The Archiver object used to extract the archive.
+   * @return string[]
+   *   The relative paths of the files contained in the archive.
    *
    * @throws \Exception
    */
   private function archiveExtract($file, $directory) {
-    $archiver = $this->archiverManager->getInstance(['filepath' => $file]);
-    if (!$archiver) {
+    $zip = new \ZipArchive();
+    if ($zip->open($this->fileSystem->realpath($file)) !== TRUE) {
       throw new \Exception($this->t('Cannot extract %file, not a valid archive.', ['%file' => $file]));
     }
 
     if (file_exists($directory)) {
       $this->fileSystem->deleteRecursive($directory);
     }
+    $this->fileSystem->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY);
 
-    $archiver->extract($directory);
-    return $archiver;
+    $names = [];
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+      $names[] = $zip->getNameIndex($i);
+    }
+    $zip->extractTo($this->fileSystem->realpath($directory));
+    $zip->close();
+    return $names;
   }
 
 }
